@@ -1,8 +1,9 @@
-from monitoring.monitoring import monitoring
+from controller.controller import controller
 
 if __name__ == "__main__":
-    HOST = 'localhost'
-    PORT = 9222
+    app_controller = controller()
 
-    monitor = monitoring(HOST, PORT)
-    monitor.start_monitoring()
+    app_controller.set_up()
+    app_controller.run()
+
+

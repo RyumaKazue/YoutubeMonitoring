@@ -3,6 +3,7 @@ import websocket
 import json
 import threading
 from enum import Enum, auto
+import sys
 
 class monitoring:
     class State(Enum):
@@ -90,6 +91,8 @@ class monitoring:
         
         if self.thread:
             self.thread = None
+
+        sys.exit(0)
 
     def pause_monitoring(self):
         if self.state == monitoring.State.RUNNING:
