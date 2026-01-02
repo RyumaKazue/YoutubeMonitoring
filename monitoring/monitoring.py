@@ -2,16 +2,20 @@ import requests
 import websocket
 import json
 import threading
-import keyboard
+from enum import Enum, auto
 
 class monitoring:
+    class State(Enum):
+        RUNNING=auto()
+        PAUSED=auto()
+        STOPPED=auto()
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
         self.ws = None
         self.thread = None
-
-        keyboard.add_hotkey('esc', self.stop_monitoring)
+        self.state = monitoring.State.STOPPED
 
     def on_open(self, ws):
         print("WebSocket connection opened")
@@ -22,13 +26,36 @@ class monitoring:
             "params": {"discover": True}
         }
         self.ws.send(json.dumps(enable_page_events))
+        self.state = monitoring.State.RUNNING
 
     def on_error(self, ws, error):
         print(f"WebSocket error: {error}")
+        self.state = monitoring.State.STOPPED
 
     def on_message(self, ws, message):
+        if self.state == monitoring.State.PAUSED:
+            print("Monitoring is paused. Ignoring message.")
+            return
+
         res_json = json.loads(message)
-        print(f"Received message: {res_json}")
+        method = res_json.get('method')
+        if not method == 'Target.targetInfoChanged':
+            return
+        
+        param = res_json.get('params')
+        type = param.get('targetInfo', {}).get('type')
+
+        if not type == 'page':
+            return
+        
+        url = param.get('targetInfo', {}).get('url')
+        targetId = param.get('targetInfo', {}).get('targetId')
+
+        if not (url and targetId):
+            print("URL or Target ID not found in message")
+            return
+
+        self.close_youtube_tub(url, targetId)
 
     def on_close(self, ws, close_status_code, close_msg):
         print("WebSocket connection closed")
@@ -57,14 +84,20 @@ class monitoring:
         self.thread.daemon = True
         self.thread.start()
 
-        keyboard.wait()
-
     def stop_monitoring(self):
         if self.ws:
             self.ws.close()
         
         if self.thread:
             self.thread = None
+
+    def pause_monitoring(self):
+        if self.state == monitoring.State.RUNNING:
+            self.state = monitoring.State.PAUSED
+            print('Pausing monitoring...')
+        elif self.state == monitoring.State.PAUSED:
+            self.state = monitoring.State.RUNNING
+            print('Resuming monitoring...')
 
     def close_youtube_tub(self, url, targetId):
         if not "youtube.com" in url:
