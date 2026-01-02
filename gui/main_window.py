@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, QIODevice
 from PySide6.QtWidgets import QPushButton
+from core.AppState import AppState
 import sys
 
 class main_window:
@@ -28,13 +29,22 @@ class main_window:
     def setStartAndPauseButtonHandler(self, handler):
         if not self.startAndPauseButton:
             raise RuntimeError("UI not loaded or StartAndPause button not found")
-        self.startAndPauseButton.clicked.connect(handler)
+        # 既存の接続を切断してから新しいハンドラを接続
+        try:
+            self.startAndPauseButton.clicked.connect(handler)
+        except (RuntimeError, TypeError):
+            pass  # 接続がない場合のエラーを無視
+        
 
     def setStopButtonHandler(self, handler):
         if not self.stopButton:
             raise RuntimeError("UI not loaded or Stop button not found")
-        self.stopButton.clicked.connect(handler)
-
+        # 既存の接続を切断してから新しいハンドラを接続
+        try:
+            self.stopButton.clicked.connect(handler)
+        except (RuntimeError, TypeError):
+            pass  # 接続がない場合のエラーを無視
+        
     def show(self):
         if not self.window:
             print("Error: UI not loaded")
@@ -43,4 +53,10 @@ class main_window:
 
     def run(self):
         sys.exit(self.app.exec())
+
+    def buttonTextUpdate(self, state):
+        if state == AppState.RUNNING:
+            self.startAndPauseButton.setText("Pause")
+        elif state == AppState.PAUSED:
+            self.startAndPauseButton.setText("Start")
 
