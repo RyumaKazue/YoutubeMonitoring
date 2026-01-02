@@ -2,21 +2,17 @@ import requests
 import websocket
 import json
 import threading
-from enum import Enum, auto
 import sys
+from core.AppState import AppState
 
 class monitoring:
-    class State(Enum):
-        RUNNING=auto()
-        PAUSED=auto()
-        STOPPED=auto()
-
     def __init__(self, host, port):
         self.host = host
         self.port = port
         self.ws = None
         self.thread = None
-        self.state = monitoring.State.STOPPED
+        self.state = AppState.STOPPED
+        self.appStateUpdateHandler = None
 
     def on_open(self, ws):
         print("WebSocket connection opened")
@@ -27,14 +23,15 @@ class monitoring:
             "params": {"discover": True}
         }
         self.ws.send(json.dumps(enable_page_events))
-        self.state = monitoring.State.RUNNING
+        self.state = AppState.RUNNING
+        if self.appStateUpdateHandler:
+            self.appStateUpdateHandler(self.state)
 
     def on_error(self, ws, error):
         print(f"WebSocket error: {error}")
-        self.state = monitoring.State.STOPPED
-
+        self.state = AppState.STOPPED
     def on_message(self, ws, message):
-        if self.state == monitoring.State.PAUSED:
+        if self.state == AppState.PAUSED:
             print("Monitoring is paused. Ignoring message.")
             return
 
@@ -95,12 +92,15 @@ class monitoring:
         sys.exit(0)
 
     def pause_monitoring(self):
-        if self.state == monitoring.State.RUNNING:
-            self.state = monitoring.State.PAUSED
+        if self.state == AppState.RUNNING:
+            self.state = AppState.PAUSED
             print('Pausing monitoring...')
-        elif self.state == monitoring.State.PAUSED:
-            self.state = monitoring.State.RUNNING
+        elif self.state == AppState.PAUSED:
+            self.state = AppState.RUNNING
             print('Resuming monitoring...')
+
+        if self.appStateUpdateHandler:
+            self.appStateUpdateHandler(self.state)
 
     def close_youtube_tub(self, url, targetId):
         if not "youtube.com" in url:

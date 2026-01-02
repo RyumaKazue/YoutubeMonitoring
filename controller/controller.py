@@ -17,8 +17,9 @@ class controller:
         self.window.setStopButtonHandler(self.monitoring.stop_monitoring)
 
     def set_up(self):
+        self.monitoring.appStateUpdateHandler = self.window.buttonTextUpdate
         self.monitoring.start_monitoring()
-
+        
         self.on_start_and_pause_clicked()
         self.on_stop_clicked()
 
